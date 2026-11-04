@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebPilot AI</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #080d19;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  width: 95%;
+  max-width: 500px;
+  background: #111a2c;
+  border: 1px solid #263650;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.header {
+  padding: 22px;
+  background: #17243a;
+  text-align: center;
+}
+
+.header h2 {
+  margin: 0;
+  color: #58a6ff;
+}
+
+.header p {
+  color: #aab8ce;
+  font-size: 13px;
+}
+
+.chat {
+  height: 420px;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.message {
+  padding: 12px 15px;
+  margin: 12px 0;
+  border-radius: 12px;
+  max-width: 85%;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.bot {
+  background: #24334d;
+  color: white;
+}
+
+.user {
+  background: #1769d2;
+  margin-left: auto;
+}
+
+.input-area {
+  display: flex;
+  padding: 14px;
+  gap: 10px;
+  border-top: 1px solid #263650;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px;
+  border-radius: 9px;
+  border: 1px solid #354761;
+  background: #0b1424;
+  color: white;
+  outline: none;
+}
+
+button {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 9px;
+  background: #1677ee;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #075fc8;
+}
+
+.code {
+  background: #080d19;
+  padding: 12px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.copy {
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h2>WebPilot AI</h2>
+    <p>Your AI Browser Automation Platform</p>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="message bot">
+      👋 Welcome to WebPilot AI!<br>
+      Send <b>Hi</b> to get started.
+    </div>
+  </div>
+
+  <div class="input-area">
+    <input
+      id="userInput"
+      type="text"
+      placeholder="Type your message..."
+      autocomplete="off"
+    >
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+</div>
+
+<script>
+let step = "welcome";
+
+const chat = document.getElementById("chat");
+const input = document.getElementById("userInput");
+
+function addMessage(message, type) {
+  const div = document.createElement("div");
+  div.className = "message " + type;
+  div.textContent = message;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showCode(html) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "message bot";
+
+  const title = document.createElement("p");
+  title.textContent = "Your HTML Integration Code:";
+
+  const code = document.createElement("pre");
+  code.className = "code";
+  code.textContent = html;
+
+  const copy = document.createElement("button");
+  copy.className = "copy";
+  copy.textContent = "Copy HTML Code";
+
+  copy.onclick = async () => {
+    await navigator.clipboard.writeText(html);
+    copy.textContent = "Copied!";
+  };
+
+  wrapper.append(title, code, copy);
+  chat.appendChild(wrapper);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage() {
+  const message = input.value.trim();
+  if (!message) return;
+
+  addMessage(message, "user");
+  input.value = "";
+
+  if (step === "welcome") {
+    if (message.toLowerCase() === "hi" ||
+        message.toLowerCase() === "hello") {
+      addMessage(
+        "Hello! Welcome to WebPilot AI. Please enter your password.",
+        "bot"
+      );
+      step = "password";
+    } else {
+      addMessage("Please send Hi to get started.", "bot");
+    }
+    return;
+  }
+
+  if (step === "password") {
+    addMessage("Checking your password...", "bot");
+
+    try {
+      const response = await fetch("/api/portal/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ password: message })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        addMessage("Incorrect password. Please try again.", "bot");
+        return;
+      }
+
+      if (!data.integration_html) {
+        addMessage("Integration code was not returned by the server.", "bot");
+        return;
+      }
+
+      addMessage("Password verified! Your API integration is ready.", "bot");
+      showCode(data.integration_html);
+      step = "done";
+
+    } catch (error) {
+      addMessage(
+        "Server connection failed. Please try again later.",
+        "bot"
+      );
+    }
+  }
+}
+
+input.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") sendMessage();
+});
+</script>
+
+</body>
+</html>
